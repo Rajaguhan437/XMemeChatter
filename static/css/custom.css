@@ -1,0 +1,129 @@
+/* Custom styles for X Auto Reply Tool */
+
+/* Main color scheme */
+:root {
+    --primary-color: #1DA1F2;  /* X blue */
+    --dark-bg: #15202B;        /* X dark mode background */
+    --darker-bg: #192734;      /* X darker elements */
+    --text-color: #ffffff;     /* White text */
+    --muted-text: #8899A6;     /* X muted text */
+}
+
+/* Body and general styles */
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+}
+
+.footer {
+    margin-top: auto;
+}
+
+/* Card customizations */
+.card {
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    border-top-left-radius: 15px !important;
+    border-top-right-radius: 15px !important;
+}
+
+/* Button styles */
+.btn {
+    border-radius: 50px;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Status badges */
+.badge {
+    padding: 0.5em 0.8em;
+    border-radius: 50px;
+    font-weight: 500;
+}
+
+/* List group customizations for comments */
+.list-group-item {
+    border-radius: 10px;
+    margin-bottom: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+/* Progress bar for active session */
+.progress {
+    height: 1.5rem;
+    border-radius: 50px;
+    margin-top: 10px;
+    background-color: var(--darker-bg);
+}
+
+.progress-bar {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Tables */
+.table {
+    border-collapse: separate;
+    border-spacing: 0 5px;
+}
+
+.table thead th {
+    border-bottom: none;
+    color: var(--muted-text);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+}
+
+.table tbody tr {
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.table tbody td {
+    padding: 12px 16px;
+    vertical-align: middle;
+}
+
+/* Form styling */
+.form-control, .form-select {
+    background-color: var(--darker-bg);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    border-radius: 10px;
+    padding: 0.75rem;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--darker-bg);
+    color: var(--text-color);
+    box-shadow: 0 0 0 3px rgba(29, 161, 242, 0.25);
+    border-color: var(--primary-color);
+}
+
+/* Custom animation for running status */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.bg-success.text-white {
+    animation: pulse 2s infinite;
+}

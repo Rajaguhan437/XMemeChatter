@@ -1,0 +1,206 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-dark">
+            <div class="card-body">
+                <h2 class="card-title">X Auto Reply Dashboard</h2>
+                <p class="card-text">
+                    This tool automatically replies to X (Twitter) comments with AI-generated savage/meme-style responses.
+                </p>
+                
+                <!-- Status card -->
+                <div class="card mb-4 {% if is_running %}bg-success{% else %}bg-secondary{% endif %} text-white">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i data-feather="{% if is_running %}activity{% else %}pause-circle{% endif %}"></i>
+                            Status: {% if is_running %}Running{% else %}Stopped{% endif %}
+                        </h5>
+                        
+                        {% if is_running and active_session %}
+                        <p class="card-text">
+                            Session #{{ active_session.id }} in progress.
+                            Target: {{ active_session.comments_target }} comments.
+                        </p>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                 style="width: {{ (active_session.comments_processed / active_session.comments_target) * 100 }}%"
+                                 aria-valuenow="{{ active_session.comments_processed }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="{{ active_session.comments_target }}">
+                                {{ active_session.comments_processed }}/{{ active_session.comments_target }}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Control buttons -->
+                <div class="d-flex justify-content-center gap-3">
+                    {% if not is_running %}
+                    <form action="{{ url_for('start_automation') }}" method="post">
+                        <button type="submit" class="btn btn-success">
+                            <i data-feather="play"></i> Start Automation
+                        </button>
+                    </form>
+                    {% else %}
+                    <form action="{{ url_for('stop_automation') }}" method="post">
+                        <button type="submit" class="btn btn-danger">
+                            <i data-feather="square"></i> Stop Automation
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('update_config') }}" class="btn btn-primary">
+                        <i data-feather="settings"></i> Configure
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if show_config %}
+<!-- Configuration Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h4>Configuration Settings</h4>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('update_config') }}" method="post">
+                    <div class="mb-3">
+                        <label for="x_username" class="form-label">X Username</label>
+                        <input type="text" class="form-control" id="x_username" name="x_username" 
+                               value="{{ config.x_username }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="x_password" class="form-label">X Password</label>
+                        <input type="password" class="form-control" id="x_password" name="x_password" 
+                               value="{{ config.x_password }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ai_provider" class="form-label">AI Provider</label>
+                        <select class="form-select" id="ai_provider" name="ai_provider">
+                            <option value="chatgpt" {% if config.ai_provider == 'chatgpt' %}selected{% endif %}>ChatGPT</option>
+                            <option value="xai" {% if config.ai_provider == 'xai' %}selected{% endif %}>X AI</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="comments_per_session" class="form-label">Comments Per Session</label>
+                        <input type="number" class="form-control" id="comments_per_session" name="comments_per_session" 
+                               value="{{ config.comments_per_session }}" min="1" max="100" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="delay_between_comments" class="form-label">Delay Between Comments (seconds)</label>
+                        <input type="number" class="form-control" id="delay_between_comments" name="delay_between_comments" 
+                               value="{{ config.delay_between_comments }}" min="5" max="120" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Save Configuration</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if session_data %}
+<!-- Session Detail View -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h4>Session #{{ session_data.id }} Details</h4>
+                <p class="text-muted">
+                    Created: {{ session_data.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                </p>
+            </div>
+            <div class="card-body">
+                <h5>Comments</h5>
+                
+                {% if comments %}
+                <div class="list-group">
+                    {% for comment in comments %}
+                    <div class="list-group-item list-group-item-action flex-column align-items-start bg-dark">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ comment.author }}</h6>
+                            <small>{{ comment.timestamp.strftime('%H:%M:%S') }}</small>
+                        </div>
+                        <p class="mb-1">{{ comment.original_text }}</p>
+                        <div class="alert alert-info mt-2">
+                            <strong>Reply:</strong> {{ comment.reply_text }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    No comments found for this session.
+                </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                        <i data-feather="arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Sessions -->
+{% if recent_sessions %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-dark">
+            <div class="card-header">
+                <h4>Recent Sessions</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Comments</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in recent_sessions %}
+                            <tr>
+                                <td>{{ session.id }}</td>
+                                <td>{{ session.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ session.comments_processed }}/{{ session.comments_target }}</td>
+                                <td>
+                                    <span class="badge {% if session.is_completed %}bg-success{% else %}bg-warning{% endif %}">
+                                        {% if session.is_completed %}Completed{% else %}In Progress{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('view_session', session_id=session.id) }}" class="btn btn-sm btn-info">
+                                        <i data-feather="eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
