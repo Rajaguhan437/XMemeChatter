@@ -57,6 +57,9 @@ def automation_job():
     """Background thread function to run the automation process"""
     global is_running, active_session
     
+    # Initialize comments_processed for all code paths
+    comments_processed = 0
+    
     try:
         logger.info("Starting automation job")
         # Step 1: Setup screens
@@ -68,18 +71,24 @@ def automation_job():
         
         # Step 3: Login to X if needed
         if not x_automation.is_logged_in():
-            x_automation.login()
+            # Always attempt login for our mock version
+            login_success = x_automation.login()
+            if not login_success:
+                logger.error("Failed to login to X. Please check your credentials.")
+                raise Exception("X login failed")
         
         # Step 4: Open AI assistant on secondary screen
         ai_generator.open_browser()
         screen_manager.position_window("ai", 1)  # Position on second screen
         
         # Step 5: Navigate to target X feed
-        x_automation.navigate_to_feed()
+        feed_success = x_automation.navigate_to_feed()
+        if not feed_success:
+            logger.error("Failed to navigate to X feed")
+            raise Exception("X feed navigation failed")
         
         # Step 6: Process comments
         comments_to_process = config.comments_per_session
-        comments_processed = 0
         
         while comments_processed < comments_to_process and is_running:
             # Find comments to reply to
@@ -105,16 +114,19 @@ def automation_job():
                     # Post the reply
                     x_automation.post_reply(comment, reply_text)
                     
-                    # Record in database
-                    with app.app_context():
-                        new_comment = Comment(
-                            original_text=comment_data['text'],
-                            author=comment_data['author'],
-                            reply_text=reply_text,
-                            session_id=active_session.id
-                        )
-                        db.session.add(new_comment)
-                        db.session.commit()
+                    # Check if active_session is not None and has an id before using it
+                    if active_session and hasattr(active_session, 'id'):
+                        # Record in database
+                        with app.app_context():
+                            new_comment = Comment()
+                            new_comment.original_text = comment_data['text']
+                            new_comment.author = comment_data['author']
+                            new_comment.reply_text = reply_text
+                            new_comment.session_id = active_session.id
+                            db.session.add(new_comment)
+                            db.session.commit()
+                    else:
+                        logger.error("Cannot add comment: no active session")
                     
                     comments_processed += 1
                     logger.info(f"Processed comment {comments_processed}/{comments_to_process}")
@@ -137,11 +149,14 @@ def automation_job():
         ai_generator.close_browser()
         is_running = False
         
+        # Update session in database
         with app.app_context():
-            if active_session:
-                active_session.is_completed = True
-                active_session.comments_processed = comments_processed
-                db.session.commit()
+            if active_session and hasattr(active_session, 'id'):
+                active_session_from_db = Session.query.get(active_session.id)
+                if active_session_from_db:
+                    active_session_from_db.is_completed = True
+                    active_session_from_db.comments_processed = comments_processed
+                    db.session.commit()
 
 @app.route('/')
 def index():
@@ -149,9 +164,14 @@ def index():
     # Get recent sessions
     recent_sessions = Session.query.order_by(Session.created_at.desc()).limit(5).all()
     
+    # If active_session exists, refresh it from the database to avoid detached instance error
+    active_session_data = None
+    if active_session and active_session.id:
+        active_session_data = Session.query.get(active_session.id)
+    
     return render_template('index.html', 
                           is_running=is_running,
-                          active_session=active_session,
+                          active_session=active_session_data,
                           recent_sessions=recent_sessions,
                           config=config)
 
@@ -165,12 +185,12 @@ def start_automation():
         return redirect(url_for('index'))
     
     try:
-        # Create new session
+        # Create new session - use the constructor properly
         with app.app_context():
-            new_session = Session(
-                comments_target=config.comments_per_session,
-                is_completed=False
-            )
+            new_session = Session()
+            new_session.comments_target = config.comments_per_session
+            new_session.is_completed = False
+            new_session.comments_processed = 0
             db.session.add(new_session)
             db.session.commit()
             active_session = new_session
