@@ -301,16 +301,22 @@ def get_status():
         'active_session': None
     }
     
-    if active_session:
-        # Get comment count
-        comment_count = Comment.query.filter_by(session_id=active_session.id).count()
-        
-        response['active_session'] = {
-            'id': active_session.id,
-            'created_at': active_session.created_at.isoformat(),
-            'comments_processed': comment_count,
-            'comments_target': active_session.comments_target
-        }
+    if active_session and hasattr(active_session, 'id'):
+        try:
+            # Get the session info from the database
+            session_data = Session.query.get(active_session.id)
+            if session_data:
+                # Get comment count
+                comment_count = Comment.query.filter_by(session_id=active_session.id).count()
+                
+                response['active_session'] = {
+                    'id': session_data.id,
+                    'created_at': session_data.created_at.isoformat(),
+                    'comments_processed': comment_count,
+                    'comments_target': session_data.comments_target
+                }
+        except Exception as e:
+            logger.error(f"Error getting status: {str(e)}")
     
     return jsonify(response)
 
