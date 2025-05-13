@@ -114,19 +114,36 @@ def automation_job():
                     # Post the reply
                     x_automation.post_reply(comment, reply_text)
                     
-                    # Check if active_session is not None and has an id before using it
+                    # Store the session_id in a local variable to avoid detached instance issues
+                    session_id = None
                     if active_session and hasattr(active_session, 'id'):
-                        # Record in database
+                        session_id = active_session.id
+                        
+                    # Record in database if we have a valid session_id
+                    if session_id:
                         with app.app_context():
-                            new_comment = Comment()
-                            new_comment.original_text = comment_data['text']
-                            new_comment.author = comment_data['author']
-                            new_comment.reply_text = reply_text
-                            new_comment.session_id = active_session.id
-                            db.session.add(new_comment)
-                            db.session.commit()
+                            try:
+                                # Create a new Comment object directly using constructor params
+                                new_comment = Comment()
+                                new_comment.original_text = comment_data['text']
+                                new_comment.author = comment_data['author']
+                                new_comment.reply_text = reply_text
+                                new_comment.session_id = session_id
+                                
+                                # Add and commit in a fresh session
+                                db.session.add(new_comment)
+                                db.session.commit()
+                                
+                                # Update the session as well
+                                session_obj = Session.query.get(session_id)
+                                if session_obj:
+                                    session_obj.comments_processed = comments_processed + 1
+                                    db.session.commit()
+                            except Exception as e:
+                                logger.error(f"Database error adding comment: {str(e)}")
+                                db.session.rollback()
                     else:
-                        logger.error("Cannot add comment: no active session")
+                        logger.error("Cannot add comment: no active session ID")
                     
                     comments_processed += 1
                     logger.info(f"Processed comment {comments_processed}/{comments_to_process}")
@@ -149,14 +166,27 @@ def automation_job():
         ai_generator.close_browser()
         is_running = False
         
-        # Update session in database
-        with app.app_context():
-            if active_session and hasattr(active_session, 'id'):
-                active_session_from_db = Session.query.get(active_session.id)
-                if active_session_from_db:
-                    active_session_from_db.is_completed = True
-                    active_session_from_db.comments_processed = comments_processed
-                    db.session.commit()
+        # Store the session_id for final update
+        session_id = None
+        if active_session and hasattr(active_session, 'id'):
+            session_id = active_session.id
+            
+        # Update session in database if we have a valid session_id
+        if session_id:
+            with app.app_context():
+                try:
+                    # Get a fresh session object
+                    active_session_from_db = Session.query.get(session_id)
+                    if active_session_from_db:
+                        active_session_from_db.is_completed = True
+                        active_session_from_db.comments_processed = comments_processed
+                        db.session.commit()
+                        logger.info(f"Successfully marked session {session_id} as completed")
+                    else:
+                        logger.error(f"Could not find session {session_id} in database")
+                except Exception as e:
+                    logger.error(f"Error updating session status: {str(e)}")
+                    db.session.rollback()
 
 @app.route('/')
 def index():
@@ -189,7 +219,7 @@ def start_automation():
         return redirect(url_for('index'))
     
     try:
-        # Create new session - use the constructor properly
+        # Create new session
         with app.app_context():
             new_session = Session()
             new_session.comments_target = config.comments_per_session
@@ -197,7 +227,18 @@ def start_automation():
             new_session.comments_processed = 0
             db.session.add(new_session)
             db.session.commit()
-            active_session = new_session
+            
+            # Store session ID
+            session_id = new_session.id
+            logger.info(f"Created new session with ID: {session_id}")
+            
+            # Create a new session object with just the ID to avoid detached instance issues
+            class SessionInfo:
+                pass
+            
+            session_info = SessionInfo()
+            session_info.id = session_id
+            active_session = session_info
         
         # Start automation thread
         is_running = True
@@ -207,6 +248,7 @@ def start_automation():
         
         flash('Automation started successfully!', 'success')
     except Exception as e:
+        logger.error(f"Error starting automation: {str(e)}")
         flash(f'Failed to start automation: {str(e)}', 'danger')
     
     return redirect(url_for('index'))
