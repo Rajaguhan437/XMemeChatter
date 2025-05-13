@@ -1,0 +1,9 @@
+{
+    "x_username": "Mr Sparroz",
+    "x_password": "Kirankumar6043@",
+    "ai_provider": "chatgpt",
+    "chatgpt_username": "",
+    "chatgpt_password": "",
+    "comments_per_session": 20,
+    "delay_between_comments": 15
+}

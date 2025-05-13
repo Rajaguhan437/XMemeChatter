@@ -166,8 +166,12 @@ def index():
     
     # If active_session exists, refresh it from the database to avoid detached instance error
     active_session_data = None
-    if active_session and active_session.id:
-        active_session_data = Session.query.get(active_session.id)
+    if is_running and active_session and hasattr(active_session, 'id'):
+        # Try to get the session from the database
+        try:
+            active_session_data = Session.query.get(active_session.id)
+        except Exception as e:
+            logger.error(f"Error retrieving active session: {str(e)}")
     
     return render_template('index.html', 
                           is_running=is_running,

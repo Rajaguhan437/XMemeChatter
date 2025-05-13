@@ -18,20 +18,34 @@
                             Status: {% if is_running %}Running{% else %}Stopped{% endif %}
                         </h5>
                         
-                        {% if is_running and active_session %}
+                        {% if is_running %}
                         <p class="card-text">
+                            {% if active_session %}
                             Session #{{ active_session.id }} in progress.
                             Target: {{ active_session.comments_target }} comments.
-                        </p>
-                        <div class="progress">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
-                                 style="width: {{ (active_session.comments_processed / active_session.comments_target) * 100 }}%"
-                                 aria-valuenow="{{ active_session.comments_processed }}" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="{{ active_session.comments_target }}">
-                                {{ active_session.comments_processed }}/{{ active_session.comments_target }}
+                            
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                     style="width: {{ (active_session.comments_processed / active_session.comments_target) * 100 }}%"
+                                     aria-valuenow="{{ active_session.comments_processed }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="{{ active_session.comments_target }}">
+                                    {{ active_session.comments_processed }}/{{ active_session.comments_target }}
+                                </div>
                             </div>
-                        </div>
+                            {% else %}
+                            Session in progress. Starting up...
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                                     style="width: 10%"
+                                     aria-valuenow="0" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                    Initializing...
+                                </div>
+                            </div>
+                            {% endif %}
+                        </p>
                         {% endif %}
                     </div>
                 </div>
